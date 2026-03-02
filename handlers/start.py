@@ -3,11 +3,11 @@ from telegram.ext import CallbackContext, ConversationHandler
 
 from utils import states
 from keyboards.inline import get_confirm_keyboard, get_menu_keyboard
-from db.users import create_user, get_user
+from db.users import create_user, get_user_by_tg_id
 
 
 def start(update: Update, context: CallbackContext) -> int:
-    existing_user = get_user(update.effective_user.id)
+    existing_user = get_user_by_tg_id(update.effective_user.id)
     if existing_user:
         context.bot.send_message(
             chat_id=update.effective_chat.id,

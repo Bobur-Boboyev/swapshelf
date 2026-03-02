@@ -47,7 +47,7 @@ def get_book(book_id):
     with db.cursor() as cursor:
         cursor.execute(
             """
-            SELECT b.id, b.title, b.author, g.name AS genre, b.status, b.type
+            SELECT b.id, b.title, b.author, g.name AS genre, b.status, b.type, b.added_by
             FROM books b
             JOIN genres g ON b.genre_id = g.id
             WHERE b.id = %s
@@ -55,3 +55,17 @@ def get_book(book_id):
             (book_id,),
         )
         return cursor.fetchone()
+
+def get_books_by_genre(genre_id):
+    db = get_db_connection()
+    with db.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT b.id, b.title, b.author, g.name AS genre, b.status, b.type
+            FROM books b
+            JOIN genres g ON b.genre_id = g.id
+            WHERE b.genre_id = %s
+            """,
+            (genre_id,),
+        )
+        return cursor.fetchall()

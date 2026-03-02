@@ -10,9 +10,10 @@ from keyboards.inline import (
     get_type_keyboard,
     get_book_action_keyboard,
     get_book_request_keyboard,
-    back_to_menu_keyboard
+    back_to_menu_keyboard,
+    get_books_by_genre_keyboard,
 )
-from db.books import create_book, get_my_books, get_book
+from db.books import create_book, get_my_books, get_book, get_books_by_genre
 from config import settings
 
 
@@ -133,3 +134,27 @@ def share_book(update: Update, context: CallbackContext) -> None:
 def get_back_to_menu(update: Update, context: CallbackContext) -> None:
     update.callback_query.answer()
     update.callback_query.edit_message_text("Asosiy menyu:", reply_markup=get_menu_keyboard())
+
+def browse_books(update: Update, context: CallbackContext) -> None:
+    update.callback_query.answer()
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Kitob janrini kiriting:",
+        reply_markup=get_genre_keyboard(),
+    )
+
+def show_book_details_by_genre(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    query.answer()
+    genre_id = query.data.split(":")[-1]
+    books = get_books_by_genre(genre_id)
+    if not books:
+        query.edit_message_text("Bu janrda kitob topilmadi.", reply_markup=back_to_menu_keyboard())
+        return
+    for book in books:
+        book_id, title, author, genre, status, type_ = book
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"📖 {title}\n✍️ {author}\n📚 {genre}\n🔖 {status}\n🔄 {type_}\n",
+            reply_markup=get_books_by_genre_keyboard(book_id),
+        )

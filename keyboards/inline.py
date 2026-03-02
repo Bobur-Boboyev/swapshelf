@@ -103,3 +103,23 @@ def back_to_menu_keyboard():
         [InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_menu")],
     ]
     return InlineKeyboardMarkup(keyboard)
+
+def get_books_by_genre_keyboard(book_id):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "Bosh sahifaga qaytish", callback_data="back_to_menu"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🔙 Orqaga", callback_data="back_to_genre_selection"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "✅ Kitobni olish uchun bosing", callback_data=f"request:{book_id}"
+            )
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
