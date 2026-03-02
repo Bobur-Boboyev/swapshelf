@@ -72,6 +72,8 @@ def main() -> None:
 
     dispatcher.add_handler(CallbackQueryHandler(shelf.share_book, pattern="share:"))
 
+    dispatcher.add_handler(CallbackQueryHandler(shelf.get_back_to_menu, pattern="back_to_menu"))
+
     updater.start_polling()
     updater.idle()
 

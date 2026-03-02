@@ -10,6 +10,7 @@ from keyboards.inline import (
     get_type_keyboard,
     get_book_action_keyboard,
     get_book_request_keyboard,
+    back_to_menu_keyboard
 )
 from db.books import create_book, get_my_books, get_book
 from config import settings
@@ -105,12 +106,12 @@ def show_my_books(update: Update, context: CallbackContext) -> None:
 
     books = get_my_books(update.effective_user.id)
     if not books:
-        update.callback_query.edit_message_text("Sizning javoningizda kitob yo'q.")
+        update.callback_query.edit_message_text("Sizning javoningizda kitob yo'q.", reply_markup=back_to_menu_keyboard())
         return
     message = "Sizning javoningizdagi kitoblar:\n\n"
     for pk, title, author, genre, status, type_ in books:
         message += f"📖 {title}\n✍️ {author}\n📚 {genre}\n🔖 {status}\n🔄 {type_}\n\n"
-    update.callback_query.edit_message_text(message)
+    update.callback_query.edit_message_text(message, reply_markup=back_to_menu_keyboard())
 
 
 def share_book(update: Update, context: CallbackContext) -> None:
@@ -127,4 +128,8 @@ def share_book(update: Update, context: CallbackContext) -> None:
         text=f"📖 {title}\n✍️ {author}\n📚 {genre}\n🔖 {status}\n🔄 {type_}\n",
         reply_markup=get_book_request_keyboard(book_id),
     )
-    query.edit_message_text("Kitob almashish uchun kanalga yuborildi!")
+    query.edit_message_text("Kitob almashish uchun kanalga yuborildi!", reply_markup=back_to_menu_keyboard())
+
+def get_back_to_menu(update: Update, context: CallbackContext) -> None:
+    update.callback_query.answer()
+    update.callback_query.edit_message_text("Asosiy menyu:", reply_markup=get_menu_keyboard())

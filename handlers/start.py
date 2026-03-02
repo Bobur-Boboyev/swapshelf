@@ -20,14 +20,14 @@ def start(update: Update, context: CallbackContext) -> int:
         chat_id=update.effective_chat.id, text="Assalomu alaykum! Ismingizni kiriting:"
     )
 
-    return states.SET_NAME
+    return states.RegistrationStates.SET_NAME
 
 
 def set_name(update: Update, context: CallbackContext) -> int:
     context.user_data["name"] = update.message.text
     update.message.reply_text("Telefon raqamingizni kiriting:")
 
-    return states.SET_PHONE
+    return states.RegistrationStates.SET_PHONE
 
 
 def set_phone(update: Update, context: CallbackContext) -> int:
@@ -39,7 +39,7 @@ def set_phone(update: Update, context: CallbackContext) -> int:
         reply_markup=get_confirm_keyboard(),
     )
 
-    return states.CONFIRM
+    return states.RegistrationStates.CONFIRM
 
 
 def register(update: Update, context: CallbackContext) -> int:

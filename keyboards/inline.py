@@ -92,8 +92,14 @@ def get_book_request_keyboard(book_id):
     keyboard = [
         [
             InlineKeyboardButton(
-                "✅ Kitobni olish uling", callback_data=f"request:{book_id}"
+                "✅ Kitobni olish uchun bosing", callback_data=f"request:{book_id}"
             ),
         ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def back_to_menu_keyboard():
+    keyboard = [
+        [InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_menu")],
     ]
     return InlineKeyboardMarkup(keyboard)
