@@ -8,8 +8,8 @@ from telegram.ext import (
 )
 
 from config import settings
-from utils import channel, states
-from handlers import start, shelf, request
+from utils import states
+from handlers import start, shelf, request, swap
 
 
 def main() -> None:
@@ -96,6 +96,17 @@ def main() -> None:
 
     dispatcher.add_handler(
         CallbackQueryHandler(shelf.get_back_to_menu, pattern="back_to_menu")
+    )
+
+    dispatcher.add_handler(
+        CallbackQueryHandler(request.show_my_requests, pattern="my_requests")
+    )
+
+    dispatcher.add_handler(
+        CallbackQueryHandler(swap.accept_request, pattern="answer_request:accept:")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(swap.reject_request, pattern="answer_request:reject:")
     )
 
     updater.start_polling()
