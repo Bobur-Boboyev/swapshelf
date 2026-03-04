@@ -20,6 +20,7 @@ def get_user_by_tg_id(telegram_id):
         )
         return cursor.fetchone()
 
+
 def get_user_by_id(user_id):
     db = get_db_connection()
     with db.cursor() as cursor:

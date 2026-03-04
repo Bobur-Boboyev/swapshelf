@@ -12,6 +12,7 @@ from keyboards.inline import (
     get_book_request_keyboard,
     back_to_menu_keyboard,
     get_books_by_genre_keyboard,
+    request_book_in_channel_keyboard,
 )
 from db.books import create_book, get_my_books, get_book, get_books_by_genre
 from config import settings
@@ -107,12 +108,16 @@ def show_my_books(update: Update, context: CallbackContext) -> None:
 
     books = get_my_books(update.effective_user.id)
     if not books:
-        update.callback_query.edit_message_text("Sizning javoningizda kitob yo'q.", reply_markup=back_to_menu_keyboard())
+        update.callback_query.edit_message_text(
+            "Sizning javoningizda kitob yo'q.", reply_markup=back_to_menu_keyboard()
+        )
         return
     message = "Sizning javoningizdagi kitoblar:\n\n"
     for pk, title, author, genre, status, type_ in books:
         message += f"📖 {title}\n✍️ {author}\n📚 {genre}\n🔖 {status}\n🔄 {type_}\n\n"
-    update.callback_query.edit_message_text(message, reply_markup=back_to_menu_keyboard())
+    update.callback_query.edit_message_text(
+        message, reply_markup=back_to_menu_keyboard()
+    )
 
 
 def share_book(update: Update, context: CallbackContext) -> None:
@@ -127,13 +132,19 @@ def share_book(update: Update, context: CallbackContext) -> None:
     context.bot.send_message(
         chat_id=settings.CHANNEL_ID,
         text=f"📖 {title}\n✍️ {author}\n📚 {genre}\n🔖 {status}\n🔄 {type_}\n",
-        reply_markup=get_book_request_keyboard(book_id),
+        reply_markup=request_book_in_channel_keyboard(book_id),
     )
-    query.edit_message_text("Kitob almashish uchun kanalga yuborildi!", reply_markup=back_to_menu_keyboard())
+    query.edit_message_text(
+        "Kitob almashish uchun kanalga yuborildi!", reply_markup=back_to_menu_keyboard()
+    )
+
 
 def get_back_to_menu(update: Update, context: CallbackContext) -> None:
     update.callback_query.answer()
-    update.callback_query.edit_message_text("Asosiy menyu:", reply_markup=get_menu_keyboard())
+    update.callback_query.edit_message_text(
+        "Asosiy menyu:", reply_markup=get_menu_keyboard()
+    )
+
 
 def browse_books(update: Update, context: CallbackContext) -> None:
     update.callback_query.answer()
@@ -143,13 +154,16 @@ def browse_books(update: Update, context: CallbackContext) -> None:
         reply_markup=get_genre_keyboard(),
     )
 
+
 def show_book_details_by_genre(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
     genre_id = query.data.split(":")[-1]
     books = get_books_by_genre(genre_id)
     if not books:
-        query.edit_message_text("Bu janrda kitob topilmadi.", reply_markup=back_to_menu_keyboard())
+        query.edit_message_text(
+            "Bu janrda kitob topilmadi.", reply_markup=back_to_menu_keyboard()
+        )
         return
     for book in books:
         book_id, title, author, genre, status, type_ = book

@@ -1,6 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from db.books import get_genres
+from config import Settings
 
 
 def get_confirm_keyboard():
@@ -98,28 +99,52 @@ def get_book_request_keyboard(book_id):
     ]
     return InlineKeyboardMarkup(keyboard)
 
+
 def back_to_menu_keyboard():
     keyboard = [
         [InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_menu")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
+
 def get_books_by_genre_keyboard(book_id):
     keyboard = [
+        [InlineKeyboardButton("Bosh sahifaga qaytish", callback_data="back_to_menu")],
         [
-            InlineKeyboardButton(
-                "Bosh sahifaga qaytish", callback_data="back_to_menu"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔙 Orqaga", callback_data="back_to_genre_selection"
-            ),
+            InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_genre_selection"),
         ],
         [
             InlineKeyboardButton(
                 "✅ Kitobni olish uchun bosing", callback_data=f"request:{book_id}"
             )
         ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def answer_request_keyboard(book_id, requester_id):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "✅ So'rovni qabul qilish",
+                callback_data=f"answer_request:accept:{book_id}:{requester_id}",
+            ),
+            InlineKeyboardButton(
+                "❌ So'rovni rad etish",
+                callback_data=f"answer_request:reject:{book_id}:{requester_id}",
+            ),
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def request_book_in_channel_keyboard(book_id):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "✅ So'rov yuborish",
+                url=f"https://t.me/{Settings.BOT_USERNAME}?start=request_{book_id}",
+            )
+        ]
     ]
     return InlineKeyboardMarkup(keyboard)

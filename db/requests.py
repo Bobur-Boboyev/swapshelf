@@ -1,5 +1,6 @@
 from .connection import get_db_connection
 
+
 def save_book_request(user_id, book_id, status):
     db = get_db_connection()
     with db.cursor() as cursor:

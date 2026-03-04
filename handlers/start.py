@@ -2,11 +2,22 @@ from telegram import Update
 from telegram.ext import CallbackContext, ConversationHandler
 
 from utils import states
-from keyboards.inline import get_confirm_keyboard, get_menu_keyboard
+from keyboards.inline import (
+    get_confirm_keyboard,
+    get_menu_keyboard,
+    get_book_request_keyboard,
+)
 from db.users import create_user, get_user_by_tg_id
+from db.books import get_book
 
 
 def start(update: Update, context: CallbackContext) -> int:
+    args = context.args
+
+    if args:
+        context.user_data["payload"] = args[0]
+    print(f"Start command received with args: {args}")
+
     existing_user = get_user_by_tg_id(update.effective_user.id)
     if existing_user:
         context.bot.send_message(
@@ -14,6 +25,16 @@ def start(update: Update, context: CallbackContext) -> int:
             text=f"Xush kelibsiz, {existing_user[2]}! Siz allaqachon ro'yxatdan o'tgansiz.",
             reply_markup=get_menu_keyboard(),
         )
+
+        payload = context.user_data.get("payload")
+        if payload and payload.startswith("request_"):
+            book_id = payload.split("_")[1]
+            book_name = get_book(book_id)[1]
+            context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"Kitobni olish: {book_name}",
+                reply_markup=get_book_request_keyboard(book_id),
+            )
         return ConversationHandler.END
 
     context.bot.send_message(
@@ -57,5 +78,13 @@ def register(update: Update, context: CallbackContext) -> int:
         text=f"Xush kelibsiz, {name}! Siz muvaffaqiyatli ro'yxatdan o'tdingiz.",
         reply_markup=get_menu_keyboard(),
     )
+    payload = context.user_data.get("payload")
+    if payload and payload.startswith("request_"):
+        book_id = payload.split("_")[1]
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Kitobni olish: {book_id}",
+            reply_markup=get_book_request_keyboard(book_id),
+        )
 
     return ConversationHandler.END

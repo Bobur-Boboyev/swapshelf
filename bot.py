@@ -8,7 +8,7 @@ from telegram.ext import (
 )
 
 from config import settings
-from utils import states
+from utils import channel, states
 from handlers import start, shelf, request
 
 
@@ -71,16 +71,32 @@ def main() -> None:
     )
 
     dispatcher.add_handler(CallbackQueryHandler(shelf.share_book, pattern="share:"))
-    
-    dispatcher.add_handler(CallbackQueryHandler(shelf.browse_books, pattern="browse_books"))
 
-    dispatcher.add_handler(CallbackQueryHandler(shelf.show_book_details_by_genre, pattern="add_book:genre:"))
+    dispatcher.add_handler(
+        CallbackQueryHandler(shelf.browse_books, pattern="browse_books")
+    )
 
-    dispatcher.add_handler(CallbackQueryHandler(shelf.browse_books, pattern='back_to_genre_selection'))
+    dispatcher.add_handler(
+        CallbackQueryHandler(
+            shelf.show_book_details_by_genre, pattern="add_book:genre:"
+        )
+    )
 
-    dispatcher.add_handler(CallbackQueryHandler(request.request_book, pattern="request:"))
+    dispatcher.add_handler(
+        CallbackQueryHandler(shelf.browse_books, pattern="back_to_genre_selection")
+    )
 
-    dispatcher.add_handler(CallbackQueryHandler(shelf.get_back_to_menu, pattern="back_to_menu"))
+    dispatcher.add_handler(
+        CallbackQueryHandler(request.request_book, pattern="request:")
+    )
+
+    dispatcher.add_handler(
+        CallbackQueryHandler(request.request_book, pattern="request_book_in_channel:")
+    )
+
+    dispatcher.add_handler(
+        CallbackQueryHandler(shelf.get_back_to_menu, pattern="back_to_menu")
+    )
 
     updater.start_polling()
     updater.idle()

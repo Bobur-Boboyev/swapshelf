@@ -56,6 +56,7 @@ def get_book(book_id):
         )
         return cursor.fetchone()
 
+
 def get_books_by_genre(genre_id):
     db = get_db_connection()
     with db.cursor() as cursor:
