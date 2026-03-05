@@ -148,3 +148,28 @@ def request_book_in_channel_keyboard(book_id):
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
+
+
+def return_book_keyboard(swap_id):
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "✅ Kitobni qaytarish",
+                callback_data=f"return_book:{swap_id}",
+            )
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def give_feedback_keyboard(swap_id):
+    keyboard = [
+        [InlineKeyboardButton("⭐️⭐️⭐️⭐️⭐️ 5", callback_data=f"feedback:{swap_id}:5")],
+        [InlineKeyboardButton("⭐️⭐️⭐️⭐️ 4", callback_data=f"feedback:{swap_id}:4")],
+        [InlineKeyboardButton("⭐️⭐️⭐️ 3", callback_data=f"feedback:{swap_id}:3")],
+        [InlineKeyboardButton("⭐️⭐️ 2", callback_data=f"feedback:{swap_id}:2")],
+        [
+            InlineKeyboardButton("⭐️ 1", callback_data=f"feedback:{swap_id}:1"),
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)

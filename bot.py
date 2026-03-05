@@ -9,7 +9,7 @@ from telegram.ext import (
 
 from config import settings
 from utils import states
-from handlers import start, shelf, request, swap
+from handlers import profile, start, shelf, request, swap
 
 
 def main() -> None:
@@ -107,6 +107,20 @@ def main() -> None:
     )
     dispatcher.add_handler(
         CallbackQueryHandler(swap.reject_request, pattern="answer_request:reject:")
+    )
+
+    dispatcher.add_handler(CallbackQueryHandler(swap.show_my_swaps, pattern="my_swaps"))
+
+    dispatcher.add_handler(
+        CallbackQueryHandler(swap.return_book, pattern="return_book:")
+    )
+
+    dispatcher.add_handler(
+        CallbackQueryHandler(swap.create_feedback, pattern="feedback:")
+    )
+
+    dispatcher.add_handler(
+        CallbackQueryHandler(profile.view_profile, pattern="my_profile")
     )
 
     updater.start_polling()
