@@ -1,7 +1,10 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from db.books import get_genres
+from db.services import GenreService
+from db.session import SessionLocal
 from config import Settings
+
+genre_service = GenreService(SessionLocal())
 
 
 def get_confirm_keyboard():
@@ -27,10 +30,10 @@ def get_menu_keyboard():
 
 
 def get_genre_keyboard():
-    genres = get_genres()
+    genres = genre_service.get_all_genres()
     keyboard = [
-        [InlineKeyboardButton(name, callback_data=f"add_book:genre:{genre_id}")]
-        for genre_id, name in genres
+        [InlineKeyboardButton(genre.name, callback_data=f"add_book:genre:{genre.id}")]
+        for genre in genres
     ]
     return InlineKeyboardMarkup(keyboard)
 

@@ -6,11 +6,22 @@ from keyboards.inline import (
     return_book_keyboard,
     give_feedback_keyboard,
 )
-from db.users import get_user_by_id, get_user_by_tg_id
-from db.requests import find_request_id, update_request_status
-from db.swaps import create_swap, get_my_swaps, update_swap_status, get_swap_by_id
-from db.books import get_book
-from db.review import create_review
+from db.services import (
+    UserService,
+    SwapRequestService,
+    SwapService,
+    BookService,
+    ReviewService,
+)
+from db.session import SessionLocal
+
+session = SessionLocal()
+
+user_service = UserService(session)
+swap_request_service = SwapRequestService(session)
+swap_service = SwapService(session)
+book_service = BookService(session)
+review_service = ReviewService(session)
 
 
 def accept_request(update: Update, context: CallbackContext) -> None:
@@ -19,34 +30,40 @@ def accept_request(update: Update, context: CallbackContext) -> None:
     data = query.data.split(":")
     book_id, requester_id = data[2], data[3]
 
-    requester_info = get_user_by_id(user_id=requester_id)
-    requester_tg_id = requester_info[1]
-    requester_name = requester_info[2]
-    requester_phone = requester_info[3]
+    book = book_service.get_book_by_id(book_id=book_id)
 
-    responder_info = get_user_by_tg_id(query.from_user.id)
-    responder_id = responder_info[0]
-    responder_name = responder_info[2]
-    responder_phone = responder_info[3]
+    requester_info = user_service.get_user_by_id(user_id=requester_id)
 
-    request_id = find_request_id(requester_id, book_id)
-    update_request_status(request_id, "Accepted")
-    create_swap(
-        swap_request_id=request_id,
-        requester_id=requester_id,
-        responder_id=responder_id,
-        book_id=book_id,
-        status="Active",
+    responder_info = user_service.get_user_by_tg_id(query.from_user.id)
+
+    request = swap_request_service.get_request_by_requester_id_and_book_id(
+        requester_info.id, book_id
+    )
+    if not request:
+        query.edit_message_text(
+            "So'rov topilmadi yoki allaqachon ko'rib chiqilgan.",
+            reply_markup=back_to_menu_keyboard(),
+        )
+        return
+
+    swap_request_service.update_request_status(request.id, "accepted")
+
+    swap = swap_service.create_swap(
+        swap_request_id=request.id,
+        requester_id=requester_info.id,
+        responder_id=responder_info.id,
+        book_id=book.id,
+        status="active",
     )
 
     context.bot.send_message(
-        chat_id=requester_tg_id,
-        text=f"Sizning {get_book(book_id)[1]} kitobiga bo'lgan so'rovingiz qabul qilindi!\n\nKitob egasi: {responder_name}\ntel: {responder_phone}",
+        chat_id=requester_info.telegram_id,
+        text=f"Sizning {book.title} kitobiga bo'lgan so'rovingiz qabul qilindi!\n\nKitob egasi: {responder_info.full_name}\ntel: {responder_info.phone_number}",
         reply_markup=back_to_menu_keyboard(),
     )
 
     query.edit_message_text(
-        text=f"Qabul qilib oluvchi: {requester_name}\ntel: {requester_phone}",
+        text=f"{book.title} kitobi qabul qilib oluvchisi: {requester_info.full_name}\ntel: {requester_info.phone_number}",
         reply_markup=back_to_menu_keyboard(),
     )
 
@@ -57,26 +74,35 @@ def reject_request(update: Update, context: CallbackContext) -> None:
     data = query.data.split(":")
     book_id, requester_id = data[2], data[3]
 
-    requester_info = get_user_by_id(user_id=requester_id)
-    requester_tg_id = requester_info[1]
+    book = book_service.get_book_by_id(book_id=book_id)
 
-    responder_info = get_user_by_tg_id(query.from_user.id)
-    responder_id = responder_info[0]
+    requester_info = user_service.get_user_by_id(user_id=requester_id)
 
-    request_id = find_request_id(requester_id, book_id)
-    print(request_id)
-    update_request_status(request_id, "Rejected")
-    create_swap(
-        swap_request_id=request_id,
-        requester_id=requester_id,
-        responder_id=responder_id,
-        book_id=book_id,
-        status="Cancelled",
+    responder_info = user_service.get_user_by_tg_id(query.from_user.id)
+
+    request = swap_request_service.get_request_by_requester_id_and_book_id(
+        requester_info.id, book_id
+    )
+    if not request:
+        query.edit_message_text(
+            "So'rov topilmadi yoki allaqachon ko'rib chiqilgan.",
+            reply_markup=back_to_menu_keyboard(),
+        )
+        return
+
+    swap_request_service.update_request_status(request.id, "rejected")
+
+    swap = swap_service.create_swap(
+        swap_request_id=request.id,
+        requester_id=requester_info.id,
+        responder_id=responder_info.id,
+        book_id=book.id,
+        status="canceled",
     )
 
     context.bot.send_message(
-        chat_id=requester_tg_id,
-        text=f"Sizning {get_book(book_id)[1]} kitobiga bo'lgan so'rovingiz rad etildi!",
+        chat_id=requester_info.telegram_id,
+        text=f"Sizning {book.title} kitobiga bo'lgan so'rovingiz rad etildi!",
         reply_markup=back_to_menu_keyboard(),
     )
 
@@ -89,9 +115,8 @@ def show_my_swaps(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
 
-    user_info = get_user_by_tg_id(query.from_user.id)
-    user_id = user_info[0]
-    swaps = get_my_swaps(user_id)
+    user = user_service.get_user_by_tg_id(query.from_user.id)
+    swaps = user.my_taken_swaps
 
     if not swaps:
         query.edit_message_text(
@@ -101,12 +126,11 @@ def show_my_swaps(update: Update, context: CallbackContext) -> None:
         return
 
     for swap in swaps:
-        swap_id, status, book_title, responder_username = swap
-
-        query.message.reply_text(
-            f"Kitob: {book_title}\nStatus: {status}\nKimdan: {responder_username}",
-            reply_markup=return_book_keyboard(swap_id),
-        )
+        if swap.status.value == "active":
+            query.message.reply_text(
+                f"Kitob: {swap.book.title}\nStatus: {swap.status.value}\nKimdan: {swap.responder.full_name}",
+                reply_markup=return_book_keyboard(swap.id),
+            )
 
     query.message.reply_text(
         "Bu sizning barcha almashtirishlaringiz.", reply_markup=back_to_menu_keyboard()
@@ -118,10 +142,11 @@ def return_book(update: Update, context: CallbackContext) -> None:
     query.answer()
     swap_id = query.data.split(":")[1]
 
-    update_swap_status(swap_id, "Completed")
+    swap = swap_service.update_swap_status(swap_id, "completed")
 
     query.message.reply_text(
-        "kitob uchun feedback bering", reply_markup=give_feedback_keyboard(swap_id)
+        f"{swap.book.title} kitobi uchun feedback bering",
+        reply_markup=give_feedback_keyboard(swap.id),
     )
 
     query.edit_message_text(
@@ -135,13 +160,15 @@ def create_feedback(update: Update, context: CallbackContext) -> None:
     query.answer()
     _, swap_id, feedback = query.data.split(":")
 
-    reviewer = get_user_by_tg_id(query.from_user.id)
-    reviewer_id = reviewer[0]
+    reviewer = user_service.get_user_by_tg_id(query.from_user.id)
 
-    swap_info = get_swap_by_id(swap_id)
-    reviewee_id = swap_info[3]
+    swap_info = swap_service.get_swap_by_id(swap_id)
 
-    create_review(reviewer_id=reviewer_id, reviewee_id=reviewee_id, rating=feedback)
+    review = review_service.creat_review(
+        reviewer_id=swap_info.requester_id,
+        reviewee_id=swap_info.responder_id,
+        rating=feedback,
+    )
 
     query.edit_message_text(
         "Rahmat! Sizning fikringiz biz uchun muhim.",

@@ -7,8 +7,13 @@ from keyboards.inline import (
     get_menu_keyboard,
     get_book_request_keyboard,
 )
-from db.users import create_user, get_user_by_tg_id
-from db.books import get_book
+from db.services import UserService, BookService
+from db.session import SessionLocal
+
+session = SessionLocal()
+
+user_service = UserService(session)
+book_service = BookService(session)
 
 
 def start(update: Update, context: CallbackContext) -> int:
@@ -18,23 +23,25 @@ def start(update: Update, context: CallbackContext) -> int:
         context.user_data["payload"] = args[0]
     print(f"Start command received with args: {args}")
 
-    existing_user = get_user_by_tg_id(update.effective_user.id)
-    if existing_user:
+    existing_user = user_service.get_user_by_tg_id(update.effective_user.id)
+
+    if existing_user and not args:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Xush kelibsiz, {existing_user[2]}! Siz allaqachon ro'yxatdan o'tgansiz.",
+            text=f"Xush kelibsiz, {existing_user.full_name}! Siz allaqachon ro'yxatdan o'tgansiz.",
             reply_markup=get_menu_keyboard(),
         )
+        return ConversationHandler.END
 
-        payload = context.user_data.get("payload")
-        if payload and payload.startswith("request_"):
-            book_id = payload.split("_")[1]
-            book_name = get_book(book_id)[1]
-            context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=f"Kitobni olish: {book_name}",
-                reply_markup=get_book_request_keyboard(book_id),
-            )
+    payload = context.user_data.get("payload")
+    if existing_user and payload and payload.startswith("request_"):
+        book_id = payload.split("_")[1]
+        book = book_service.get_book_by_id(book_id=book_id)
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Kitobni olish: {book.title}",
+            reply_markup=get_book_request_keyboard(book.id),
+        )
         return ConversationHandler.END
 
     context.bot.send_message(
@@ -66,25 +73,32 @@ def set_phone(update: Update, context: CallbackContext) -> int:
 def register(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    query.edit_message_text("Ro'yxatdan o'tdingiz! Rahmat!")
 
     user_id = update.effective_user.id
     name = context.user_data["name"]
     phone = context.user_data["phone"]
-    create_user(user_id, name, phone)
-
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=f"Xush kelibsiz, {name}! Siz muvaffaqiyatli ro'yxatdan o'tdingiz.",
-        reply_markup=get_menu_keyboard(),
+    user = user_service.register(
+        full_name=name, telegram_id=user_id, phone_number=phone
     )
+    query.edit_message_text("Ro'yxatdan o'tdingiz! Rahmat!")
+
+    payload = context.user_data.get("payload")
+    if not payload:
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Xush kelibsiz, {user.full_name}! Siz muvaffaqiyatli ro'yxatdan o'tdingiz.",
+            reply_markup=get_menu_keyboard(),
+        )
+        return ConversationHandler.END
+
     payload = context.user_data.get("payload")
     if payload and payload.startswith("request_"):
         book_id = payload.split("_")[1]
+        book = book_service.get_book_by_id(book_id)
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Kitobni olish: {book_id}",
-            reply_markup=get_book_request_keyboard(book_id),
+            text=f"Kitobni olish: {book.title}",
+            reply_markup=get_book_request_keyboard(book.id),
         )
 
     return ConversationHandler.END

@@ -9,13 +9,19 @@ from keyboards.inline import (
     get_status_keyboard,
     get_type_keyboard,
     get_book_action_keyboard,
-    get_book_request_keyboard,
     back_to_menu_keyboard,
     get_books_by_genre_keyboard,
     request_book_in_channel_keyboard,
 )
-from db.books import create_book, get_my_books, get_book, get_books_by_genre
+from db.services import BookService, GenreService, UserService
+from db.session import SessionLocal
 from config import settings
+
+session = SessionLocal()
+
+book_service = BookService(session)
+genre_service = GenreService(session)
+user_service = UserService(session)
 
 
 def ask_title(update: Update, context: CallbackContext) -> int:
@@ -65,13 +71,16 @@ def set_type(update: Update, context: CallbackContext) -> int:
     context.user_data["type"] = book_type
     title = context.user_data["title"]
     author = context.user_data["author"]
-    genre = context.user_data["genre"]
+    genre_id = context.user_data["genre"]
     status = context.user_data["status"]
     type_ = context.user_data["type"]
+
+    genre = genre_service.get_genre_by_id(genre_id)
+
     query.edit_message_text(
         f"Kitob nomi: {title}\n"
         f"Muallif: {author}\n"
-        f"Janr: {genre}\n"
+        f"Janr: {genre.name}\n"
         f"Holat: {status}\n"
         f"Tur: {type_}\n"
         "Tasdiqlaysizmi?",
@@ -83,38 +92,48 @@ def set_type(update: Update, context: CallbackContext) -> int:
 def add_book(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     query.answer()
-    query.edit_message_text("Kitob qo'shildi! Rahmat!")
 
-    book_id = create_book(
-        telegram_id=update.effective_user.id,
-        title=context.user_data["title"],
-        author=context.user_data["author"],
-        genre_id=context.user_data["genre"],
-        status=context.user_data["status"],
-        type_=context.user_data["type"],
+    title = context.user_data["title"]
+    author = context.user_data["author"]
+    genre_id = context.user_data["genre"]
+    status = context.user_data["status"]
+    type_ = context.user_data["type"]
+    added_by = user_service.get_user_by_tg_id(query.from_user.id)
+
+    book = book_service.add_book(
+        title=title,
+        author=author,
+        genre_id=genre_id,
+        status=status,
+        type_=type_,
+        added_by=added_by.id,
     )
+    query.edit_message_text(f"{book.title} Kitob qo'shildi! Rahmat!")
 
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"📖 {context.user_data['title']}\n✍️ {context.user_data['author']}\n📚 {context.user_data['genre']}\n🔖 {context.user_data['status']}\n🔄 {context.user_data['type']}\n\n",
-        reply_markup=get_book_action_keyboard(book_id),
+        text=f"📖 {book.title}\n✍️ {book.author}\n📚 {book.genre.name}\n🔖 {book.status.value}\n🔄 {book.type_.value}\n\n",
+        reply_markup=get_book_action_keyboard(book.id),
     )
 
     return ConversationHandler.END
 
 
 def show_my_books(update: Update, context: CallbackContext) -> None:
-    update.callback_query.answer()
+    query = update.callback_query
+    query.answer()
 
-    books = get_my_books(update.effective_user.id)
+    user = user_service.get_user_by_tg_id(query.from_user.id)
+    books = user.books
     if not books:
         update.callback_query.edit_message_text(
             "Sizning javoningizda kitob yo'q.", reply_markup=back_to_menu_keyboard()
         )
         return
+
     message = "Sizning javoningizdagi kitoblar:\n\n"
-    for pk, title, author, genre, status, type_ in books:
-        message += f"📖 {title}\n✍️ {author}\n📚 {genre}\n🔖 {status}\n🔄 {type_}\n\n"
+    for book in books:
+        message += f"📖 {book.title}\n✍️ {book.author}\n📚 {book.genre.name}\n🔖 {book.status.value}\n🔄 {book.type_.value}\n\n"
     update.callback_query.edit_message_text(
         message, reply_markup=back_to_menu_keyboard()
     )
@@ -124,18 +143,20 @@ def share_book(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
     book_id = query.data.split(":")[-1]
-    book = get_book(book_id)
+    book = book_service.get_book_by_id(book_id)
+
     if not book:
         query.edit_message_text("Kitob topilmadi.")
         return
-    title, author, genre, status, type_ = book[1], book[2], book[3], book[4], book[5]
+
     context.bot.send_message(
         chat_id=settings.CHANNEL_ID,
-        text=f"📖 {title}\n✍️ {author}\n📚 {genre}\n🔖 {status}\n🔄 {type_}\n",
-        reply_markup=request_book_in_channel_keyboard(book_id),
+        text=f"📖 {book.title}\n✍️ {book.author}\n📚 {book.genre.name}\n🔖 {book.status.value}\n🔄 {book.type_.value}\n",
+        reply_markup=request_book_in_channel_keyboard(book.id),
     )
     query.edit_message_text(
-        "Kitob almashish uchun kanalga yuborildi!", reply_markup=back_to_menu_keyboard()
+        f"{book.title} kitobi almashish uchun kanalga yuborildi!",
+        reply_markup=back_to_menu_keyboard(),
     )
 
 
@@ -159,16 +180,20 @@ def show_book_details_by_genre(update: Update, context: CallbackContext) -> None
     query = update.callback_query
     query.answer()
     genre_id = query.data.split(":")[-1]
-    books = get_books_by_genre(genre_id)
+
+    genre = genre_service.get_genre_by_id(genre_id)
+    books = genre.books
+
     if not books:
         query.edit_message_text(
-            "Bu janrda kitob topilmadi.", reply_markup=back_to_menu_keyboard()
+            f"{genre.name} janrida kitob topilmadi.",
+            reply_markup=back_to_menu_keyboard(),
         )
         return
+
     for book in books:
-        book_id, title, author, genre, status, type_ = book
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"📖 {title}\n✍️ {author}\n📚 {genre}\n🔖 {status}\n🔄 {type_}\n",
-            reply_markup=get_books_by_genre_keyboard(book_id),
+            text=f"📖 {book.title}\n✍️ {book.author}\n📚 {book.genre.name}\n🔖 {book.status.value}\n🔄 {book.type_.value}\n",
+            reply_markup=get_books_by_genre_keyboard(book.id),
         )
