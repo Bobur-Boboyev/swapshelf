@@ -9,9 +9,22 @@ class ReviewService:
         self.session = session
         self.user_service = UserService(session)
 
-    def creat_review(
+    def create_review(
         self, reviewer_id: int, reviewee_id: int, rating: int, comment: str = "A'lo"
     ) -> Review:
+
+        if reviewer_id == reviewee_id:
+            raise ValueError("User cannot review themselves")
+
+        if not 1 <= rating <= 5:
+            raise ValueError("Rating must be between 1 and 5")
+
+        existing = (
+            self.session.query(Review)
+            .filter_by(reviewer_id=reviewer_id, reviewee_id=reviewee_id)
+            .first()
+        )
+
         review = Review(
             reviewer_id=reviewer_id,
             reviewee_id=reviewee_id,
@@ -23,6 +36,6 @@ class ReviewService:
         self.session.commit()
         self.session.refresh(review)
 
-        user = self.user_service.user_rating(reviewee_id)
+        self.user_service.update_user_rating(reviewee_id)
 
         return review

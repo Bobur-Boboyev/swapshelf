@@ -14,9 +14,15 @@ def view_profile(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
     user = user_service.get_user_by_tg_id(query.from_user.id)
+
+    if not user:
+        query.edit_message_text("Siz hali ro'yxatdan o'tmagansiz")
+        return
+
     rating = user.rating
     name = user.full_name
     phone = user.phone_number
+
     query.edit_message_text(
         f"Ism: {name}\nTel: {phone}\nRating: {rating:.2f}",
         reply_markup=back_to_menu_keyboard(),

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
-from ..models import User
+from ..models import User, Review
 
 
 class UserService:
@@ -13,9 +14,7 @@ class UserService:
             return
 
         user = User(
-            full_name=full_name,
-            telegram_id=telegram_id,
-            phone_number=phone_number
+            full_name=full_name, telegram_id=telegram_id, phone_number=phone_number
         )
 
         self.session.add(user)
@@ -23,24 +22,27 @@ class UserService:
         self.session.refresh(user)
 
         return user
-    
-    def user_rating(self, user_id) -> int | float:
+
+    def update_user_rating(self, user_id: int) -> float:
+        avg = (
+            self.session.query(func.avg(Review.rating))
+            .filter(Review.reviewee_id == user_id)
+            .scalar()
+        )
+
         user = self.get_user_by_id(user_id)
+
         if not user:
             return 0
 
-        reviews = getattr(user, "my_reviews", [])
+        user.rating = float(avg or 0)
 
-        if reviews:
-            average = sum([r.rating for r in reviews]) / len(reviews)
-            user.rating = average
-            self.session.add(user)
-            self.session.commit()
-            self.session.refresh(user)
-            return average
+        self.session.add(user)
+        self.session.commit()
+        self.session.refresh(user)
 
-        return 0
-        
+        return user.rating
+
     def get_user_by_id(self, user_id: int) -> User:
         return self.session.query(User).filter_by(id=user_id).first()
 

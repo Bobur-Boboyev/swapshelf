@@ -164,10 +164,10 @@ def create_feedback(update: Update, context: CallbackContext) -> None:
 
     swap_info = swap_service.get_swap_by_id(swap_id)
 
-    review = review_service.creat_review(
+    review = review_service.create_review(
         reviewer_id=swap_info.requester_id,
         reviewee_id=swap_info.responder_id,
-        rating=feedback,
+        rating=int(feedback),
     )
 
     query.edit_message_text(
