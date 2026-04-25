@@ -97,7 +97,7 @@ def reject_request(update: Update, context: CallbackContext) -> None:
         requester_id=requester_info.id,
         responder_id=responder_info.id,
         book_id=book.id,
-        status="canceled",
+        status="cancelled",
     )
 
     context.bot.send_message(
